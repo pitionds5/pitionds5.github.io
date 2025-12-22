@@ -103,50 +103,8 @@
             border-left: 4px solid var(--primary);
         }
         
-        .pulse-animation {
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.8; }
-            100% { opacity: 1; }
-        }
-        
-        .progress-bar {
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            border-radius: 2px;
-        }
-        
         .logo-glow {
             filter: drop-shadow(0 0 15px rgba(37, 99, 235, 0.5));
-        }
-        
-        .notification {
-            transition: all 0.3s ease;
-            animation: slideIn 0.3s ease;
-        }
-        
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        .shake {
-            animation: shake 0.5s ease-in-out;
-        }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
         }
     </style>
 </head>
@@ -185,34 +143,25 @@
         const googleProvider = new firebase.auth.GoogleAuthProvider();
 
         // ====================
-        // VALIDATION MESSAGES
+        // FRIENDLY ERROR MESSAGES
         // ====================
-        const ERROR_MESSAGES = {
-            // Firebase Auth Errors
-            'auth/invalid-email': 'Please enter a valid email address.',
-            'auth/user-disabled': 'This account has been disabled.',
-            'auth/user-not-found': 'No account found with this email.',
-            'auth/wrong-password': 'Incorrect password. Please try again.',
-            'auth/email-already-in-use': 'This email is already registered. Try signing in.',
-            'auth/operation-not-allowed': 'Email/password accounts are not enabled.',
-            'auth/weak-password': 'Password should be at least 6 characters.',
-            'auth/too-many-requests': 'Too many attempts. Please try again later.',
-            'auth/network-request-failed': 'Network error. Check your connection.',
-            'auth/popup-closed-by-user': 'Login popup was closed. Please try again.',
-            'auth/popup-blocked': 'Popup blocked by browser. Please allow popups.',
+        const getFriendlyError = (errorCode) => {
+            const errorMap = {
+                // Firebase Auth Errors
+                'auth/invalid-email': 'Please enter a valid email address.',
+                'auth/user-disabled': 'This account has been disabled.',
+                'auth/user-not-found': 'No account found with this email.',
+                'auth/wrong-password': 'Incorrect password. Please try again.',
+                'auth/email-already-in-use': 'This email is already registered. Try signing in.',
+                'auth/operation-not-allowed': 'Email/password accounts are not enabled.',
+                'auth/weak-password': 'Password should be at least 6 characters.',
+                'auth/too-many-requests': 'Too many attempts. Please try again later.',
+                'auth/network-request-failed': 'Network error. Check your connection.',
+                'auth/popup-closed-by-user': 'Login popup was closed. Please try again.',
+                'auth/popup-blocked': 'Popup blocked by browser. Please allow popups.',
+            };
             
-            // Custom Validation
-            'empty-email': 'Email address is required.',
-            'empty-password': 'Password is required.',
-            'invalid-email-format': 'Please enter a valid email address (e.g., user@example.com).',
-            'password-mismatch': 'Passwords do not match.',
-            'password-too-short': 'Password must be at least 6 characters.',
-            'terms-not-accepted': 'You must accept the terms and conditions.',
-            
-            // Success Messages
-            'signup-success': 'Account created successfully! Welcome to ALL About MTA.',
-            'login-success': 'Welcome back!',
-            'logout-success': 'Signed out successfully.'
+            return errorMap[errorCode] || "An error occurred. Please try again.";
         };
 
         // ====================
@@ -240,7 +189,6 @@
 
             async getDiscordUserInfo(accessToken) {
                 try {
-                    this.showNotification("Connecting Discord account...", "info");
                     const response = await fetch('https://discord.com/api/users/@me', {
                         headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
@@ -248,12 +196,9 @@
                     if (response.ok) {
                         const discordUser = await response.json();
                         this.handleDiscordSuccess(discordUser);
-                    } else {
-                        this.showNotification("Failed to connect to Discord", "error");
                     }
                 } catch (error) {
                     console.error("Discord fetch error:", error);
-                    this.showNotification("Network error connecting to Discord", "error");
                 }
             }
 
@@ -268,8 +213,6 @@
                     provider: 'discord',
                     loggedIn: true
                 }));
-                
-                this.showNotification(`Welcome ${discordUser.username}! Discord account connected.`, "success");
                 this.showDashboard();
             }
 
@@ -328,8 +271,13 @@
                                 </div>
                             </div>
 
-                            <!-- Validation Error Area -->
-                            <div id="validationErrors" class="mb-4"></div>
+                            <!-- Single Error Display Area -->
+                            <div id="formError" class="mb-4 p-3 rounded bg-red-900 border border-red-700 text-red-200 hidden">
+                                <div class="flex items-center">
+                                    <i class="fas fa-exclamation-circle mr-2"></i>
+                                    <span id="errorText"></span>
+                                </div>
+                            </div>
 
                             <!-- Login/Signup Toggle -->
                             <div class="flex mb-8 bg-slate-800 rounded-lg p-1">
@@ -348,10 +296,6 @@
                                     <input type="email" id="email" required 
                                            class="input-field w-full p-3 rounded-lg"
                                            placeholder="your@email.com">
-                                    <div id="emailError" class="error-message hidden">
-                                        <i class="fas fa-exclamation-circle"></i>
-                                        <span></span>
-                                    </div>
                                 </div>
                                 
                                 <div>
@@ -359,10 +303,6 @@
                                     <input type="password" id="password" required 
                                            class="input-field w-full p-3 rounded-lg"
                                            placeholder="••••••••">
-                                    <div id="passwordError" class="error-message hidden">
-                                        <i class="fas fa-exclamation-circle"></i>
-                                        <span></span>
-                                    </div>
                                 </div>
                                 
                                 ${!this.isLogin ? `
@@ -371,21 +311,13 @@
                                     <input type="password" id="confirmPassword" required 
                                            class="input-field w-full p-3 rounded-lg"
                                            placeholder="••••••••">
-                                    <div id="confirmPasswordError" class="error-message hidden">
-                                        <i class="fas fa-exclamation-circle"></i>
-                                        <span></span>
-                                    </div>
                                 </div>
                                 
                                 <div class="flex items-center">
-                                    <input type="checkbox" id="terms" class="mr-2 rounded">
+                                    <input type="checkbox" id="terms" class="mr-2 rounded" checked>
                                     <label for="terms" class="text-sm text-gray-400">
                                         I agree to the <a href="#" class="text-blue-400 hover:text-blue-300">Terms</a> and <a href="#" class="text-blue-400 hover:text-blue-300">Privacy Policy</a>
                                     </label>
-                                </div>
-                                <div id="termsError" class="error-message hidden">
-                                    <i class="fas fa-exclamation-circle"></i>
-                                    <span>You must accept the terms and conditions</span>
                                 </div>
                                 ` : ''}
                                 
@@ -457,12 +389,12 @@
                 // Toggle buttons
                 document.getElementById('toggleLogin').onclick = () => {
                     this.isLogin = true;
-                    this.clearErrors();
+                    this.clearError();
                     this.renderAuthPage();
                 };
                 document.getElementById('toggleSignup').onclick = () => {
                     this.isLogin = false;
-                    this.clearErrors();
+                    this.clearError();
                     this.renderAuthPage();
                 };
 
@@ -482,204 +414,124 @@
                     window.location.href = DISCORD_OAUTH_URL;
                 };
 
-                // Real-time validation
-                document.getElementById('email')?.addEventListener('blur', () => this.validateEmail());
-                document.getElementById('password')?.addEventListener('blur', () => this.validatePassword());
-                if (!this.isLogin) {
-                    document.getElementById('confirmPassword')?.addEventListener('blur', () => this.validateConfirmPassword());
-                }
+                // Clear error when user starts typing
+                ['email', 'password', 'confirmPassword'].forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.addEventListener('input', () => this.clearError());
+                    }
+                });
             }
 
-            clearErrors() {
-                // Clear all error displays
-                const errorElements = document.querySelectorAll('.error-message');
-                errorElements.forEach(el => {
-                    el.classList.add('hidden');
-                    el.querySelector('span').textContent = '';
-                });
+            clearError() {
+                const errorDiv = document.getElementById('formError');
+                if (errorDiv) {
+                    errorDiv.classList.add('hidden');
+                }
                 
                 // Clear input error states
-                const inputs = document.querySelectorAll('.input-field');
-                inputs.forEach(input => input.classList.remove('input-error'));
-                
-                // Clear validation area
-                const validationArea = document.getElementById('validationErrors');
-                if (validationArea) validationArea.innerHTML = '';
+                ['email', 'password', 'confirmPassword'].forEach(fieldId => {
+                    const input = document.getElementById(fieldId);
+                    if (input) {
+                        input.classList.remove('input-error');
+                    }
+                });
             }
 
-            showError(field, message) {
-                this.clearErrors();
+            showError(message, fieldId = null) {
+                this.clearError();
                 
-                const errorElement = document.getElementById(`${field}Error`);
-                const inputElement = document.getElementById(field);
+                const errorDiv = document.getElementById('formError');
+                const errorText = document.getElementById('errorText');
                 
-                if (errorElement && inputElement) {
-                    errorElement.querySelector('span').textContent = message;
-                    errorElement.classList.remove('hidden');
-                    inputElement.classList.add('input-error');
-                    inputElement.classList.add('shake');
-                    
-                    setTimeout(() => {
-                        inputElement.classList.remove('shake');
-                    }, 500);
-                }
-            }
-
-            validateEmail() {
-                const email = document.getElementById('email')?.value.trim();
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                
-                if (!email) {
-                    this.showError('email', ERROR_MESSAGES['empty-email']);
-                    return false;
+                if (errorDiv && errorText) {
+                    errorText.textContent = message;
+                    errorDiv.classList.remove('hidden');
                 }
                 
-                if (!emailRegex.test(email)) {
-                    this.showError('email', ERROR_MESSAGES['invalid-email-format']);
-                    return false;
-                }
-                
-                return true;
-            }
-
-            validatePassword() {
-                const password = document.getElementById('password')?.value;
-                
-                if (!password) {
-                    this.showError('password', ERROR_MESSAGES['empty-password']);
-                    return false;
-                }
-                
-                if (password.length < 6 && !this.isLogin) {
-                    this.showError('password', ERROR_MESSAGES['password-too-short']);
-                    return false;
-                }
-                
-                return true;
-            }
-
-            validateConfirmPassword() {
-                const password = document.getElementById('password')?.value;
-                const confirmPassword = document.getElementById('confirmPassword')?.value;
-                
-                if (password !== confirmPassword) {
-                    this.showError('confirmPassword', ERROR_MESSAGES['password-mismatch']);
-                    return false;
-                }
-                
-                return true;
-            }
-
-            validateTerms() {
-                if (!this.isLogin) {
-                    const termsAccepted = document.getElementById('terms')?.checked;
-                    if (!termsAccepted) {
-                        document.getElementById('termsError').classList.remove('hidden');
-                        return false;
+                // Highlight the problematic field
+                if (fieldId) {
+                    const input = document.getElementById(fieldId);
+                    if (input) {
+                        input.classList.add('input-error');
+                        input.focus();
                     }
                 }
-                return true;
             }
 
             async handleEmailAuth() {
-                // Clear previous errors
-                this.clearErrors();
+                this.clearError();
                 
-                // Validate all fields
-                const isEmailValid = this.validateEmail();
-                const isPasswordValid = this.validatePassword();
-                let isConfirmValid = true;
-                let isTermsValid = true;
-                
-                if (!this.isLogin) {
-                    isConfirmValid = this.validateConfirmPassword();
-                    isTermsValid = this.validateTerms();
-                }
-                
-                if (!isEmailValid || !isPasswordValid || !isConfirmValid || !isTermsValid) {
-                    return;
-                }
-
-                const email = document.getElementById('email').value;
+                const email = document.getElementById('email').value.trim();
                 const password = document.getElementById('password').value;
                 
+                // Basic validation
+                if (!email) {
+                    this.showError("Email address is required", "email");
+                    return;
+                }
+                
+                if (!email.includes('@') || !email.includes('.')) {
+                    this.showError("Please enter a valid email address", "email");
+                    return;
+                }
+                
+                if (!password) {
+                    this.showError("Password is required", "password");
+                    return;
+                }
+                
+                if (!this.isLogin) {
+                    const confirmPassword = document.getElementById('confirmPassword').value;
+                    const termsAccepted = document.getElementById('terms').checked;
+                    
+                    if (password.length < 6) {
+                        this.showError("Password must be at least 6 characters", "password");
+                        return;
+                    }
+                    
+                    if (password !== confirmPassword) {
+                        this.showError("Passwords do not match", "confirmPassword");
+                        return;
+                    }
+                    
+                    if (!termsAccepted) {
+                        this.showError("You must accept the terms and conditions");
+                        return;
+                    }
+                }
+
                 try {
                     if (this.isLogin) {
                         await auth.signInWithEmailAndPassword(email, password);
-                        this.showNotification(ERROR_MESSAGES['login-success'], "success");
                     } else {
                         await auth.createUserWithEmailAndPassword(email, password);
-                        this.showNotification(ERROR_MESSAGES['signup-success'], "success");
                     }
                 } catch (error) {
-                    console.error("Auth error:", error);
+                    const friendlyMessage = getFriendlyError(error.code);
                     
-                    // Map Firebase error codes to friendly messages
-                    const errorCode = error.code;
-                    const friendlyMessage = ERROR_MESSAGES[errorCode] || 
-                                           "An unexpected error occurred. Please try again.";
-                    
-                    // Determine which field to show error on
-                    if (errorCode.includes('email') || errorCode === 'auth/user-not-found') {
-                        this.showError('email', friendlyMessage);
-                    } else if (errorCode.includes('password') || errorCode === 'auth/wrong-password') {
-                        this.showError('password', friendlyMessage);
-                    } else {
-                        this.showNotification(friendlyMessage, "error");
+                    // Determine which field to highlight
+                    let fieldId = null;
+                    if (error.code.includes('email') || error.code === 'auth/user-not-found') {
+                        fieldId = 'email';
+                    } else if (error.code.includes('password') || error.code === 'auth/wrong-password') {
+                        fieldId = 'password';
                     }
+                    
+                    this.showError(friendlyMessage, fieldId);
                 }
             }
 
             async signInWithGoogle() {
                 try {
-                    this.showNotification("Connecting to Google...", "info");
-                    const result = await auth.signInWithPopup(googleProvider);
-                    this.showNotification(`Welcome ${result.user.displayName || result.user.email}!`, "success");
+                    await auth.signInWithPopup(googleProvider);
                 } catch (error) {
-                    console.error("Google auth error:", error);
-                    const errorCode = error.code;
-                    const friendlyMessage = ERROR_MESSAGES[errorCode] || 
-                                           "Google sign-in failed. Please try again.";
-                    this.showNotification(friendlyMessage, "error");
+                    const friendlyMessage = getFriendlyError(error.code);
+                    this.showError(friendlyMessage);
                 }
             }
 
-            showNotification(message, type = "info") {
-                // Remove existing notifications
-                const existing = document.querySelector('.notification');
-                if (existing) existing.remove();
-                
-                const icon = type === 'error' ? 'fa-exclamation-circle' :
-                            type === 'success' ? 'fa-check-circle' :
-                            'fa-info-circle';
-                
-                const notification = document.createElement('div');
-                notification.className = `notification fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
-                    type === 'error' ? 'bg-red-600' :
-                    type === 'success' ? 'bg-green-600' :
-                    'bg-blue-600'
-                }`;
-                notification.innerHTML = `
-                    <div class="flex items-center">
-                        <i class="fas ${icon} mr-2"></i>
-                        <span>${message}</span>
-                    </div>
-                `;
-                document.body.appendChild(notification);
-                
-                setTimeout(() => {
-                    notification.style.opacity = '0';
-                    notification.style.transform = 'translateX(100%)';
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            notification.parentNode.removeChild(notification);
-                        }
-                    }, 300);
-                }, 5000);
-            }
-
             showDashboard() {
-                // Dashboard code remains the same as before
                 const userData = JSON.parse(localStorage.getItem('mta_user')) || {};
                 const isDiscord = userData.provider === 'discord';
                 const isGoogle = userData.provider === 'google.com';
@@ -735,7 +587,7 @@
                                 </div>
                                 
                                 <div class="mt-8">
-                                    <div class="progress-bar w-full"></div>
+                                    <div class="h-1 bg-gradient-to-r from-blue-500 to-green-500 w-full rounded"></div>
                                     <div class="flex justify-between text-sm text-gray-400 mt-2">
                                         <span>Development Progress</span>
                                         <span>85%</span>
@@ -839,7 +691,6 @@
                 document.getElementById('logoutBtn').onclick = () => {
                     auth.signOut();
                     localStorage.removeItem('mta_user');
-                    this.showNotification(ERROR_MESSAGES['logout-success'], "success");
                     this.renderAuthPage();
                 };
             }
